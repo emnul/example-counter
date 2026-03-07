@@ -18,8 +18,8 @@ import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 export const currentDir = path.resolve(new URL(import.meta.url).pathname, '..');
 
 export const contractConfig = {
-  privateStateStoreName: 'counter-private-state',
-  zkConfigPath: path.resolve(currentDir, '..', '..', 'contract', 'src', 'managed', 'counter'),
+  privateStateStoreName: 'shielded-access-control-private-state',
+  zkConfigPath: path.resolve(currentDir, '..', '..', 'ShieldedAccessControl', 'src', 'managed', 'ShieldedAccessControl'),
 };
 
 export interface Config {

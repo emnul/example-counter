@@ -13,9 +13,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This is how we type an empty object.
-export type CounterPrivateState = {
-  privateCounter: number;
-};
-
-export const witnesses = {};
+export * as ShieldedAccessControl from "./managed/ShieldedAccessControl/contract/index.js";
+export * from "./witnesses.js";

@@ -13,17 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Counter, type CounterPrivateState } from '@midnight-ntwrk/counter-contract';
+import { ShieldedAccessControl, type ShieldedAccessControlPrivateState, ShieldedAccessControlWitnesses } from '@emnul/shielded-access-control';
 import type { MidnightProviders } from '@midnight-ntwrk/midnight-js-types';
 import type { DeployedContract, FoundContract } from '@midnight-ntwrk/midnight-js-contracts';
 import type { ImpureCircuitId } from '@midnight-ntwrk/compact-js';
 
-export type CounterCircuits = ImpureCircuitId<Counter.Contract<CounterPrivateState>>;
+export type ShieldedAccessControlCircuits = ImpureCircuitId<ShieldedAccessControl.Contract<ShieldedAccessControlPrivateState>>;
 
-export const CounterPrivateStateId = 'counterPrivateState';
+export const ShieldedAccessControlPrivateStateId = 'shieldedAccessControlPrivateState';
 
-export type CounterProviders = MidnightProviders<CounterCircuits, typeof CounterPrivateStateId, CounterPrivateState>;
+export type ShieldedAccessControlProviders = MidnightProviders<ShieldedAccessControlCircuits, typeof ShieldedAccessControlPrivateStateId, ShieldedAccessControlPrivateState>;
 
-export type CounterContract = Counter.Contract<CounterPrivateState>;
+export type ShieldedAccessControlContract = ShieldedAccessControl.Contract<ShieldedAccessControlPrivateState>;
 
-export type DeployedCounterContract = DeployedContract<CounterContract> | FoundContract<CounterContract>;
+export type DeployedShieldedAccessControlContract = DeployedContract<ShieldedAccessControlContract> | FoundContract<ShieldedAccessControlContract>;
+
+

@@ -18,7 +18,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import { createInterface, type Interface } from 'node:readline/promises';
 import { type Logger } from 'pino';
 import { type StartedDockerComposeEnvironment, type DockerComposeEnvironment } from 'testcontainers';
-import { type CounterProviders, type DeployedCounterContract } from './common-types';
+import { type ShieldedAccessControlProviders, type DeployedShieldedAccessControlContract } from './common-types';
 import { type Config, StandaloneConfig } from './config';
 import * as api from './api';
 
@@ -35,7 +35,7 @@ const GENESIS_MINT_WALLET_SEED = '0000000000000000000000000000000000000000000000
 const BANNER = `
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
-║              Midnight Counter Example                        ║
+║              Midnight ShieldedAccessControl Example                        ║
 ║              ─────────────────────                           ║
 ║              A privacy-preserving smart contract demo        ║
 ║                                                              ║
@@ -61,21 +61,19 @@ const contractMenu = (dustBalance: string) => `
 ${DIVIDER}
   Contract Actions${dustBalance ? `                    DUST: ${dustBalance}` : ''}
 ${DIVIDER}
-  [1] Deploy a new counter contract
-  [2] Join an existing counter contract
+  [1] Deploy a new shielded access control contract
+  [2] Join an existing shielded access control contract
   [3] Monitor DUST balance
   [4] Exit
 ${'─'.repeat(62)}
 > `;
 
-/** Build the counter actions menu, showing current DUST balance in the header. */
-const counterMenu = (dustBalance: string) => `
+/** Build the shielded access control actions menu, showing current DUST balance in the header. */
+const shieldedAccessControlMenu = (dustBalance: string) => `
 ${DIVIDER}
-  Counter Actions${dustBalance ? `                     DUST: ${dustBalance}` : ''}
+  shielded access control Actions${dustBalance ? `                     DUST: ${dustBalance}` : ''}
 ${DIVIDER}
-  [1] Increment counter
-  [2] Display current counter value
-  [3] Exit
+  [1] Exit
 ${'─'.repeat(62)}
 > `;
 
@@ -126,7 +124,7 @@ const getDustLabel = async (wallet: api.WalletContext['wallet']): Promise<string
 };
 
 /** Prompt for a contract address and join an existing deployed contract. */
-const joinContract = async (providers: CounterProviders, rli: Interface): Promise<DeployedCounterContract> => {
+const joinContract = async (providers: ShieldedAccessControlProviders, rli: Interface): Promise<DeployedShieldedAccessControlContract> => {
   const contractAddress = await rli.question('Enter the contract address (hex): ');
   return await api.joinContract(providers, contractAddress);
 };
@@ -138,7 +136,7 @@ const joinContract = async (providers: CounterProviders, rli: Interface): Promis
 const startDustMonitor = async (wallet: api.WalletContext['wallet'], rli: Interface): Promise<void> => {
   console.log('');
   // Use readline question to wait for Enter — the monitor will render above this line
-  const stopPromise = rli.question('  Press Enter to return to menu...\n').then(() => {});
+  const stopPromise = rli.question('  Press Enter to return to menu...\n').then(() => { });
   await api.monitorDustBalance(wallet, stopPromise);
   console.log('');
 };
@@ -148,18 +146,18 @@ const startDustMonitor = async (wallet: api.WalletContext['wallet'], rli: Interf
  * Errors during deploy/join are caught and displayed — the user stays in the menu.
  */
 const deployOrJoin = async (
-  providers: CounterProviders,
+  providers: ShieldedAccessControlProviders,
   walletCtx: api.WalletContext,
   rli: Interface,
-): Promise<DeployedCounterContract | null> => {
+): Promise<DeployedShieldedAccessControlContract | null> => {
   while (true) {
     const dustLabel = await getDustLabel(walletCtx.wallet);
     const choice = await rli.question(contractMenu(dustLabel));
     switch (choice.trim()) {
       case '1':
         try {
-          const contract = await api.withStatus('Deploying counter contract', () =>
-            api.deploy(providers, { privateCounter: 0 }),
+          const contract = await api.withStatus('Deploying shielded access control contract', () =>
+            api.deploy(providers, { roles: {} }),
           );
           console.log(`  Contract deployed at: ${contract.deployTxData.public.contractAddress}\n`);
           return contract;
@@ -209,28 +207,28 @@ const deployOrJoin = async (
  * Main interaction loop. Once a contract is deployed/joined, the user
  * can increment the counter or query its current value.
  */
-const mainLoop = async (providers: CounterProviders, walletCtx: api.WalletContext, rli: Interface): Promise<void> => {
-  const counterContract = await deployOrJoin(providers, walletCtx, rli);
-  if (counterContract === null) {
+const mainLoop = async (providers: ShieldedAccessControlProviders, walletCtx: api.WalletContext, rli: Interface): Promise<void> => {
+  const shieldedAccessControlContract = await deployOrJoin(providers, walletCtx, rli);
+  if (shieldedAccessControlContract === null) {
     return;
   }
 
   while (true) {
     const dustLabel = await getDustLabel(walletCtx.wallet);
-    const choice = await rli.question(counterMenu(dustLabel));
+    const choice = await rli.question(shieldedAccessControlMenu(dustLabel));
     switch (choice.trim()) {
+      // case '1':
+      //   try {
+      //     await api.withStatus('Incrementing shielded access control', () => api.increment(shieldedAccessControlContract));
+      //   } catch (e) {
+      //     const msg = e instanceof Error ? e.message : String(e);
+      //     console.log(`  ✗ Increment failed: ${msg}\n`);
+      //   }
+      //   break;
+      // case '2':
+      //   await api.displayCounterValue(providers, shieldedAccessControlContract);
+      //   break;
       case '1':
-        try {
-          await api.withStatus('Incrementing counter', () => api.increment(counterContract));
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          console.log(`  ✗ Increment failed: ${msg}\n`);
-        }
-        break;
-      case '2':
-        await api.displayCounterValue(providers, counterContract);
-        break;
-      case '3':
         return;
       default:
         console.log(`  Invalid choice: ${choice}`);

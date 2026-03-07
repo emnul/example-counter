@@ -16,7 +16,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { type ContractAddress } from '@midnight-ntwrk/compact-runtime';
-import { Counter, type CounterPrivateState, witnesses } from '@midnight-ntwrk/counter-contract';
+import { ShieldedAccessControl, type ShieldedAccessControlPrivateState, ShieldedAccessControlWitnesses } from '@emnul/shielded-access-control';
 import * as ledger from '@midnight-ntwrk/ledger-v7';
 import { unshieldedToken } from '@midnight-ntwrk/ledger-v7';
 import { deployContract, findDeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
@@ -39,11 +39,11 @@ import { type Logger } from 'pino';
 import * as Rx from 'rxjs';
 import { WebSocket } from 'ws';
 import {
-  type CounterCircuits,
-  type CounterContract,
-  type CounterPrivateStateId,
-  type CounterProviders,
-  type DeployedCounterContract,
+  type ShieldedAccessControlCircuits,
+  type ShieldedAccessControlContract,
+  type ShieldedAccessControlPrivateStateId,
+  type ShieldedAccessControlProviders,
+  type DeployedShieldedAccessControlContract,
 } from './common-types';
 import { type Config, contractConfig } from './config';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
@@ -65,8 +65,8 @@ let logger: Logger;
 globalThis.WebSocket = WebSocket;
 
 // Pre-compile the counter contract with ZK circuit assets
-const counterCompiledContract = CompiledContract.make('counter', Counter.Contract).pipe(
-  CompiledContract.withVacantWitnesses,
+const shieldedAccessControlCompiledContract = CompiledContract.make('shielded-access-control', ShieldedAccessControl.Contract).pipe(
+  CompiledContract.withWitnesses(ShieldedAccessControlWitnesses()),
   CompiledContract.withCompiledFileAssets(contractConfig.zkConfigPath),
 );
 
@@ -77,69 +77,70 @@ export interface WalletContext {
   unshieldedKeystore: UnshieldedKeystore;
 }
 
-export const getCounterLedgerState = async (
-  providers: CounterProviders,
-  contractAddress: ContractAddress,
-): Promise<bigint | null> => {
-  assertIsContractAddress(contractAddress);
-  logger.info('Checking contract ledger state...');
-  const state = await providers.publicDataProvider
-    .queryContractState(contractAddress)
-    .then((contractState) => (contractState != null ? Counter.ledger(contractState.data).round : null));
-  logger.info(`Ledger state: ${state}`);
-  return state;
-};
+// export const getCounterLedgerState = async (
+//   providers: ShieldedAccessControlProviders,
+//   contractAddress: ContractAddress,
+// ): Promise<bigint | null> => {
+//   assertIsContractAddress(contractAddress);
+//   logger.info('Checking contract ledger state...');
+//   const state = await providers.publicDataProvider
+//     .queryContractState(contractAddress)
+//     .then((contractState) => (contractState != null ? ShieldedAccessControl.ledger(contractState.data)._adminRoles : null));
+//   logger.info(`Ledger state: ${state}`);
+//   return state;
+// };
 
-export const counterContractInstance: CounterContract = new Counter.Contract(witnesses);
+export const shieldedAccessControlContractInstance: ShieldedAccessControlContract = new ShieldedAccessControl.Contract(ShieldedAccessControlWitnesses());
 
 export const joinContract = async (
-  providers: CounterProviders,
+  providers: ShieldedAccessControlProviders,
   contractAddress: string,
-): Promise<DeployedCounterContract> => {
-  const counterContract = await findDeployedContract(providers, {
+): Promise<DeployedShieldedAccessControlContract> => {
+  const shieldedAccessControlContract = await findDeployedContract(providers, {
     contractAddress,
-    compiledContract: counterCompiledContract,
-    privateStateId: 'counterPrivateState',
+    compiledContract: shieldedAccessControlCompiledContract,
+    privateStateId: 'shieldedAccessControlPrivateState',
     initialPrivateState: { privateCounter: 0 },
   });
-  logger.info(`Joined contract at address: ${counterContract.deployTxData.public.contractAddress}`);
-  return counterContract;
+  logger.info(`Joined contract at address: ${shieldedAccessControlContract.deployTxData.public.contractAddress}`);
+  return shieldedAccessControlContract;
 };
 
 export const deploy = async (
-  providers: CounterProviders,
-  privateState: CounterPrivateState,
-): Promise<DeployedCounterContract> => {
+  providers: ShieldedAccessControlProviders,
+  privateState: ShieldedAccessControlPrivateState,
+): Promise<DeployedShieldedAccessControlContract> => {
   logger.info('Deploying counter contract...');
-  const counterContract = await deployContract(providers, {
-    compiledContract: counterCompiledContract,
-    privateStateId: 'counterPrivateState',
+  const shieldedAccessControlContract = await deployContract(providers, {
+    compiledContract: shieldedAccessControlCompiledContract,
+    args: [new Uint8Array(32)],
+    privateStateId: 'shieldedAccessControlPrivateState',
     initialPrivateState: privateState,
   });
-  logger.info(`Deployed contract at address: ${counterContract.deployTxData.public.contractAddress}`);
-  return counterContract;
+  logger.info(`Deployed contract at address: ${shieldedAccessControlContract.deployTxData.public.contractAddress}`);
+  return shieldedAccessControlContract;
 };
 
-export const increment = async (counterContract: DeployedCounterContract): Promise<FinalizedTxData> => {
-  logger.info('Incrementing...');
-  const finalizedTxData = await counterContract.callTx.increment();
-  logger.info(`Transaction ${finalizedTxData.public.txId} added in block ${finalizedTxData.public.blockHeight}`);
-  return finalizedTxData.public;
-};
+// export const increment = async (shieldedAccessControlContract: DeployedShieldedAccessControlContract): Promise<FinalizedTxData> => {
+//   logger.info('Incrementing...');
+//   const finalizedTxData = await shieldedAccessControlContract.callTx.increment();
+//   logger.info(`Transaction ${finalizedTxData.public.txId} added in block ${finalizedTxData.public.blockHeight}`);
+//   return finalizedTxData.public;
+// };
 
-export const displayCounterValue = async (
-  providers: CounterProviders,
-  counterContract: DeployedCounterContract,
-): Promise<{ counterValue: bigint | null; contractAddress: string }> => {
-  const contractAddress = counterContract.deployTxData.public.contractAddress;
-  const counterValue = await getCounterLedgerState(providers, contractAddress);
-  if (counterValue === null) {
-    logger.info(`There is no counter contract deployed at ${contractAddress}.`);
-  } else {
-    logger.info(`Current counter value: ${Number(counterValue)}`);
-  }
-  return { contractAddress, counterValue };
-};
+// export const displayCounterValue = async (
+//   providers: ShieldedAccessControlProviders,
+//   shieldedAccessControlContract: DeployedShieldedAccessControlContract,
+// ): Promise<{ counterValue: bigint | null; contractAddress: string }> => {
+//   const contractAddress = shieldedAccessControlContract.deployTxData.public.contractAddress;
+//   const counterValue = await getCounterLedgerState(providers, contractAddress);
+//   if (counterValue === null) {
+//     logger.info(`There is no counter contract deployed at ${contractAddress}.`);
+//   } else {
+//     logger.info(`Current counter value: ${Number(counterValue)}`);
+//   }
+//   return { contractAddress, counterValue };
+// };
 
 /**
  * Sign all unshielded offers in a transaction's intents, using the correct
@@ -512,9 +513,9 @@ export const buildFreshWallet = async (config: Config): Promise<WalletContext> =
  */
 export const configureProviders = async (ctx: WalletContext, config: Config) => {
   const walletAndMidnightProvider = await createWalletAndMidnightProvider(ctx);
-  const zkConfigProvider = new NodeZkConfigProvider<CounterCircuits>(contractConfig.zkConfigPath);
+  const zkConfigProvider = new NodeZkConfigProvider<ShieldedAccessControlCircuits>(contractConfig.zkConfigPath);
   return {
-    privateStateProvider: levelPrivateStateProvider<typeof CounterPrivateStateId>({
+    privateStateProvider: levelPrivateStateProvider<typeof ShieldedAccessControlPrivateStateId>({
       privateStateStoreName: contractConfig.privateStateStoreName,
       walletProvider: walletAndMidnightProvider,
     }),

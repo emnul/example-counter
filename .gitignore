@@ -41,6 +41,7 @@ jspm_packages/
 .env
 *.env
 !*.env.example
+deployment.json
 
 # MacOS
 .DS_Store
