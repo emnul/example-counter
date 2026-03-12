@@ -113,7 +113,7 @@ export const deploy = async (
   logger.info('Deploying counter contract...');
   const shieldedAccessControlContract = await deployContract(providers, {
     compiledContract: shieldedAccessControlCompiledContract,
-    args: [new Uint8Array(32)],
+    args: [new Uint8Array(Buffer.alloc(32, 'salt'))],
     privateStateId: 'shieldedAccessControlPrivateState',
     initialPrivateState: privateState,
   });
